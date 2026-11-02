@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (secrets) — keep the example
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases
+data/
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+coverage/
+
+# OS / editor clutter
+.DS_Store
+*.swp
+.vscode/*
+!.vscode/extensions.json
