@@ -54,19 +54,6 @@ const userSchema = {
   },
 } as const;
 
-const serviceSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    consultantId: { type: 'string', format: 'uuid' },
-    name: { type: 'string', example: 'Strategy session' },
-    durationMinutes: { type: 'integer', example: 60 },
-    priceMinor: { type: 'integer', description: 'Price in paise. 149900 is ₹1,499.00.', example: 149900 },
-    bufferMinutes: { type: 'integer', example: 15 },
-    isActive: { type: 'boolean' },
-  },
-} as const;
-
 export const openApiDocument = {
   openapi: '3.0.3',
   info: {
@@ -76,12 +63,7 @@ export const openApiDocument = {
       'Appointment API. Signup chooses customer or consultant, then proves the email with a one-time code before the account exists. Login is email and password for every role. A consultant stays unapproved until an admin allows them. In development the OTP is printed in the server log.',
   },
   servers: [{ url: '/' }],
-  tags: [
-    { name: 'Health' },
-    { name: 'Services' },
-    { name: 'Auth' },
-    { name: 'Admin' },
-  ],
+  tags: [{ name: 'Health' }, { name: 'Auth' }, { name: 'Admin' }],
   components: {
     securitySchemes: {
       session: {
@@ -93,7 +75,6 @@ export const openApiDocument = {
     schemas: {
       Error: errorSchema,
       User: userSchema,
-      Service: serviceSchema,
     },
   },
   paths: {
@@ -128,38 +109,6 @@ export const openApiDocument = {
           },
           '503': {
             description: 'The database is not reachable.',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
-          },
-        },
-      },
-    },
-    '/consultants/{consultantId}/services': {
-      get: {
-        tags: ['Services'],
-        summary: 'Bookable services for an approved consultant',
-        parameters: [
-          {
-            name: 'consultantId',
-            in: 'path',
-            required: true,
-            schema: { type: 'string', format: 'uuid' },
-          },
-        ],
-        responses: {
-          '200': {
-            description:
-              'Active services. An unknown id, or a consultant who is not approved yet, returns an empty list.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: { services: { type: 'array', items: { $ref: '#/components/schemas/Service' } } },
-                },
-              },
-            },
-          },
-          '400': {
-            description: 'The id is not a UUID.',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
           },
         },
