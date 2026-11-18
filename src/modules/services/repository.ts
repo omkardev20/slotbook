@@ -40,6 +40,12 @@ export async function listActiveServices(consultantId: string): Promise<Service[
              buffer_minutes, is_active
       FROM services
       WHERE consultant_id = ? AND is_active = 1
+        AND EXISTS (
+          SELECT 1 FROM user_roles
+          WHERE user_id = services.consultant_id
+            AND role = 'consultant'
+            AND is_approved = 1
+        )
       ORDER BY name
     `,
     args: [consultantId],
