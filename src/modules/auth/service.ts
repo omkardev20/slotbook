@@ -1,6 +1,7 @@
 import argon2 from 'argon2';
 import { env } from '../../config/env.ts';
 import { AppError } from '../../lib/errors.ts';
+import { mailConfigured, sendVerificationCode } from '../../lib/mail.ts';
 import {
   OTP_MAX_ATTEMPTS,
   OTP_RESEND_MS,
@@ -64,9 +65,19 @@ export async function startSignup(input: {
     now,
   });
 
-  // Real email delivery is not part of this API yet. Development prints the code.
-  if (env.NODE_ENV !== 'production') {
+  // The code goes to the address the person typed. MAIL_FROM is who it is from.
+  if (mailConfigured()) {
+    try {
+      await sendVerificationCode(input.email, code);
+    } catch (error) {
+      console.error('Verification email failed:', error);
+      throw new AppError(503, 'EMAIL_FAILED', 'The verification email could not be sent. Try again.');
+    }
+  } else if (env.NODE_ENV !== 'production') {
     console.log(`Signup OTP for ${input.email}: ${code}`);
+    console.log('Verification email was not sent. Set SMTP_HOST, SMTP_USER, and SMTP_PASS.');
+  } else {
+    throw new AppError(503, 'EMAIL_FAILED', 'The verification email could not be sent. Try again.');
   }
 
   return { email: input.email, expiresInSeconds: OTP_TTL_MS / 1000 };

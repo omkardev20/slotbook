@@ -60,7 +60,7 @@ export const openApiDocument = {
     title: 'SlotBook API',
     version: '0.1.0',
     description:
-      'Appointment API. Signup chooses customer or consultant, then proves the email with a one-time code before the account exists. Login is email and password for every role. A consultant stays unapproved until an admin allows them. In development the OTP is printed in the server log.',
+      'Appointment API. Signup chooses customer or consultant, then proves the email with a one-time code before the account exists. Login is email and password for every role. A consultant stays unapproved until an admin allows them. The code is emailed when SMTP is configured. In development without SMTP it is printed in the server log.',
   },
   servers: [{ url: '/' }],
   tags: [{ name: 'Health' }, { name: 'Auth' }, { name: 'Admin' }],
@@ -119,7 +119,7 @@ export const openApiDocument = {
         tags: ['Auth'],
         summary: 'Start signup and issue an OTP',
         description:
-          'Does not create the account. The same email can start again: a new code replaces the previous one, and expired rows are deleted. In development the code is printed in the server log, not in this response. Calling this again within 60 seconds returns 429.',
+          'Does not create the account. The same email can start again: a new code replaces the previous one, and expired rows are deleted. The code is sent to this email when SMTP is configured. Calling this again within 60 seconds returns 429.',
         requestBody: {
           required: true,
           content: {

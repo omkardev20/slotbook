@@ -12,6 +12,15 @@ const envSchema = z
     // Optional: a local file: database needs no token.
     TURSO_AUTH_TOKEN: z.string().min(1).optional(),
     SESSION_SECRET: z.string().min(32),
+    // Sender shown on the verification email. Delivery also needs the SMTP settings.
+    MAIL_FROM: optionalEnv(z.email()),
+    SMTP_HOST: optionalEnv(z.string().min(1)),
+    SMTP_PORT: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.coerce.number().int().positive().default(587),
+    ),
+    SMTP_USER: optionalEnv(z.string().min(1)),
+    SMTP_PASS: optionalEnv(z.string().min(1)),
     // Both empty, or both set. Used only by `npm run seed:admin`.
     ADMIN_EMAIL: optionalEnv(z.email()),
     ADMIN_PASSWORD: optionalEnv(z.string().min(8).max(200)),
