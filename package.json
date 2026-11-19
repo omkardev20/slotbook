@@ -12,7 +12,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "migrate": "tsx --env-file=.env src/db/migrate.ts",
-    "seed:admin": "tsx --env-file=.env src/db/seedAdmin.ts"
+    "seed:admin": "tsx --env-file=.env src/db/seedAdmin.ts",
+    "mail:check": "tsx --env-file=.env src/lib/mailCheck.ts",
+    "test": "node --import tsx --test --test-reporter=spec \"tests/**/*.test.ts\"",
+    "mail:preview": "tsx src/lib/mailPreview.ts"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -26,11 +29,13 @@
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.5",
     "@types/nodemailer": "^8.0.2",
+    "@types/smtp-server": "^3.5.13",
     "@types/swagger-ui-express": "^4.1.8",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.14.0",
     "prettier": "^3.9.10",
+    "smtp-server": "^3.21.6",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1"
@@ -39,6 +44,7 @@
     "@libsql/client": "^0.18.0",
     "argon2": "^0.45.2",
     "express": "^5.3.0",
+    "jose": "^6.2.18",
     "nodemailer": "^10.6.0",
     "nodemon": "^3.1.14",
     "swagger-ui-express": "^5.0.1",

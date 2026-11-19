@@ -24,3 +24,6 @@ coverage/
 *.swp
 .vscode/*
 !.vscode/extensions.json
+
+# Local email previews
+.mail-preview/

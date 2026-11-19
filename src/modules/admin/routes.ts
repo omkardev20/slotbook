@@ -1,19 +1,23 @@
 import { Router } from 'express';
-import { sessionIdFromCookie } from '../auth/cookies.ts';
-import { userIdParamsSchema } from '../auth/schemas.ts';
-import { approveWaitingConsultant, requireAdmin, waitingConsultants } from '../auth/service.ts';
+import { audit } from '../../lib/audit.ts';
+import { requireAuth } from '../../middleware/auth.ts';
+import { requireRole } from '../../middleware/permissions.ts';
+import { listWaitingConsultants } from './repository.ts';
+import { userIdParamsSchema } from './schemas.ts';
+import { approveWaitingConsultant } from './service.ts';
 
 export const adminRouter = Router();
 
-adminRouter.get('/admin/consultants', async (req, res) => {
-  await requireAdmin(sessionIdFromCookie(req.header('cookie')));
-  const consultants = await waitingConsultants();
-  res.status(200).json({ consultants });
+// Every /admin route needs a logged-in admin. Declared once, not per route.
+adminRouter.use('/admin', requireAuth, requireRole('admin'));
+
+adminRouter.get('/admin/consultants', async (_req, res) => {
+  res.status(200).json({ consultants: await listWaitingConsultants() });
 });
 
 adminRouter.post('/admin/consultants/:userId/approve', async (req, res) => {
-  await requireAdmin(sessionIdFromCookie(req.header('cookie')));
   const { userId } = userIdParamsSchema.parse(req.params);
   const user = await approveWaitingConsultant(userId);
+  audit(req, 'consultant.approved', { adminId: req.user?.id, userId });
   res.status(200).json({ user });
 });

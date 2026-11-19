@@ -1,51 +1,58 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Response } from 'express';
 import { env } from '../../config/env.ts';
+import { REFRESH_TTL_SECONDS } from './token.ts';
 
-export const SESSION_COOKIE = 'slotbook_session';
-export const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+export const ACCESS_COOKIE = 'slotbook_access';
+export const REFRESH_COOKIE = 'slotbook_refresh';
+// The refresh cookie is only sent to this path, so it is exposed far less.
+// Configurable because a proxy prefix (/api/...) changes the path the browser sees.
+const REFRESH_PATH = env.REFRESH_COOKIE_PATH;
 
-function sign(sessionId: string): string {
-  const signature = createHmac('sha256', env.SESSION_SECRET).update(sessionId).digest('base64url');
-  return `${sessionId}.${signature}`;
-}
-
-export function sessionIdFromCookie(header: string | undefined): string | null {
-  if (!header) return null;
-
+function readCookie(header: string | undefined, name: string): string | null {
   const pair = header
-    .split(';')
+    ?.split(';')
     .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE}=`));
+    .find((part) => part.startsWith(`${name}=`));
   if (!pair) return null;
-
-  const token = decodeURIComponent(pair.slice(SESSION_COOKIE.length + 1));
-  const dot = token.lastIndexOf('.');
-  if (dot <= 0) return null;
-
-  const sessionId = token.slice(0, dot);
-  const signature = token.slice(dot + 1);
-  const expected = createHmac('sha256', env.SESSION_SECRET).update(sessionId).digest('base64url');
-  const given = Buffer.from(signature);
-  const actual = Buffer.from(expected);
-  if (given.length !== actual.length || !timingSafeEqual(given, actual)) return null;
-  return sessionId;
+  return decodeURIComponent(pair.slice(name.length + 1)) || null;
 }
 
-export function setSessionCookie(res: Response, sessionId: string): void {
+export const accessTokenFromCookie = (header: string | undefined) =>
+  readCookie(header, ACCESS_COOKIE);
+export const refreshTokenFromCookie = (header: string | undefined) =>
+  readCookie(header, REFRESH_COOKIE);
+
+function writeCookie(
+  res: Response,
+  name: string,
+  value: string,
+  path: string,
+  maxAgeSeconds: number,
+): void {
   const parts = [
-    `${SESSION_COOKIE}=${sign(sessionId)}`,
-    'HttpOnly',
-    'SameSite=Lax',
-    'Path=/',
-    `Max-Age=${SESSION_TTL_MS / 1000}`,
+    `${name}=${value}`,
+    'HttpOnly', // JavaScript in the browser can't read it (blocks XSS theft)
+    'SameSite=Lax', // not sent on cross-site POSTs (basic CSRF protection)
+    `Path=${path}`,
+    `Max-Age=${maxAgeSeconds}`,
   ];
-  if (env.NODE_ENV === 'production') parts.push('Secure');
+  if (env.NODE_ENV === 'production') parts.push('Secure'); // HTTPS only
   res.append('Set-Cookie', parts.join('; '));
 }
 
-export function clearSessionCookie(res: Response): void {
-  const parts = [`${SESSION_COOKIE}=`, 'HttpOnly', 'SameSite=Lax', 'Path=/', 'Max-Age=0'];
-  if (env.NODE_ENV === 'production') parts.push('Secure');
-  res.append('Set-Cookie', parts.join('; '));
+// The access cookie outlives the access token on purpose. The browser keeps
+// sending the expired token, so the server can answer TOKEN_EXPIRED
+// ("refresh me") instead of a vague "not logged in".
+export function setAccessCookie(res: Response, token: string): void {
+  writeCookie(res, ACCESS_COOKIE, token, '/', REFRESH_TTL_SECONDS);
+}
+
+export function setAuthCookies(res: Response, tokens: { access: string; refresh: string }): void {
+  setAccessCookie(res, tokens.access);
+  writeCookie(res, REFRESH_COOKIE, tokens.refresh, REFRESH_PATH, REFRESH_TTL_SECONDS);
+}
+
+export function clearAuthCookies(res: Response): void {
+  writeCookie(res, ACCESS_COOKIE, '', '/', 0);
+  writeCookie(res, REFRESH_COOKIE, '', REFRESH_PATH, 0); // Path must match to clear it
 }
